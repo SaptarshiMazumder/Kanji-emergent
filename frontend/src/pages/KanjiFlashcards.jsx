@@ -379,20 +379,32 @@ export default function KanjiFlashcards() {
                         )}
                       </div>
 
-                      {/* Reveal Button */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="reveal-btn flex-shrink-0"
-                        onClick={() => toggleReveal(k.id)}
-                        aria-label={revealedCards[k.id] ? 'Hide details' : 'Show details'}
-                      >
-                        {revealedCards[k.id] ? (
-                          <EyeOff className="h-5 w-5" />
-                        ) : (
-                          <Eye className="h-5 w-5" />
-                        )}
-                      </Button>
+                      {/* Reveal Button and Studied Checkbox */}
+                      <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="reveal-btn"
+                          onClick={() => toggleReveal(k.id)}
+                          aria-label={revealedCards[k.id] ? 'Hide details' : 'Show details'}
+                        >
+                          {revealedCards[k.id] ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </Button>
+                        <label className="flex items-center gap-1.5 cursor-pointer group">
+                          <Checkbox
+                            checked={studiedKanji[k.id] || false}
+                            onCheckedChange={() => toggleStudied(k.id)}
+                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                          />
+                          <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                            Studied
+                          </span>
+                        </label>
+                      </div>
                     </div>
 
                     {/* Mnemonic Dropdown */}
