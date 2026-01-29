@@ -207,9 +207,11 @@ async def get_kanji(
             
             # Collect all vocabulary IDs we need to fetch (limit to 5 per kanji for performance)
             vocab_ids_to_fetch = set()
+            radical_ids_to_fetch = set()
             for kanji_raw in paginated_raw:
                 vocab_ids = kanji_raw["amalgamation_ids"][:5]  # Limit to 5 vocab per kanji
                 vocab_ids_to_fetch.update(vocab_ids)
+                radical_ids_to_fetch.update(kanji_raw["component_ids"])
             
             # Fetch vocabulary in batch if we have any
             vocab_map = {}
@@ -223,11 +225,38 @@ async def get_kanji(
                     for v_item in vocab_data.get("data", []):
                         v_id = v_item.get("id")
                         v_data = v_item.get("data", {})
+                        # Get all meanings, not just primary
+                        all_meanings = [m.get("meaning", "") for m in v_data.get("meanings", []) if m.get("primary")]
+                        if not all_meanings:
+                            all_meanings = [m.get("meaning", "") for m in v_data.get("meanings", [])[:1]]
                         vocab_map[v_id] = VocabWord(
                             id=v_id,
                             characters=v_data.get("characters", ""),
-                            meanings=[m.get("meaning", "") for m in v_data.get("meanings", []) if m.get("primary")],
+                            meanings=all_meanings,
                             readings=[r.get("reading", "") for r in v_data.get("readings", []) if r.get("primary")]
+                        )
+            
+            # Fetch radicals in batch if we have any
+            radical_map = {}
+            if radical_ids_to_fetch:
+                radical_ids_str = ",".join(map(str, radical_ids_to_fetch))
+                radical_url = f"{WANIKANI_BASE_URL}/subjects?ids={radical_ids_str}"
+                radical_response = await http_client.get(radical_url, headers=headers)
+                
+                if radical_response.status_code == 200:
+                    radical_data = radical_response.json()
+                    for r_item in radical_data.get("data", []):
+                        r_id = r_item.get("id")
+                        r_data = r_item.get("data", {})
+                        primary_meaning = next(
+                            (m.get("meaning", "") for m in r_data.get("meanings", []) if m.get("primary")),
+                            r_data.get("meanings", [{}])[0].get("meaning", "") if r_data.get("meanings") else ""
+                        )
+                        radical_map[r_id] = RadicalComponent(
+                            id=r_id,
+                            character=r_data.get("characters"),  # Can be None for image-only radicals
+                            slug=r_data.get("slug", ""),
+                            meaning=primary_meaning
                         )
             
             # Build final kanji objects with vocabulary
