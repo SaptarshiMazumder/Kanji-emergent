@@ -198,7 +198,10 @@ async def get_kanji(
                 # Check for next page
                 next_url = data.get("pages", {}).get("next_url")
             
-            # Apply pagination first to get the kanji we need
+            # Sort kanji by WaniKani level (ascending)
+            all_kanji_raw.sort(key=lambda x: x["data"].get("level", 1))
+            
+            # Apply pagination after sorting
             total_count = len(all_kanji_raw)
             total_pages = (total_count + per_page - 1) // per_page
             start_idx = (page - 1) * per_page
