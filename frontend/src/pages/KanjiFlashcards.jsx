@@ -240,14 +240,257 @@ export default function KanjiFlashcards() {
     return classes[level] || 'jlpt-n5';
   };
 
-  const renderPaginationItems = () => {
+  // Reusable pagination renderer
+  const renderPaginationItems = (currentPg, totalPgs, onPageChange) => {
     const items = [];
     const maxVisiblePages = 5;
     
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    let startPage = Math.max(1, currentPg - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPgs, startPage + maxVisiblePages - 1);
     
     if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    if (startPage > 1) {
+      items.push(
+        <PaginationItem key="first">
+          <PaginationLink onClick={() => onPageChange(1)}>1</PaginationLink>
+        </PaginationItem>
+      );
+      if (startPage > 2) {
+        items.push(
+          <PaginationItem key="ellipsis-start">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      items.push(
+        <PaginationItem key={i}>
+          <PaginationLink
+            isActive={i === currentPg}
+            onClick={() => onPageChange(i)}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    if (endPage < totalPgs) {
+      if (endPage < totalPgs - 1) {
+        items.push(
+          <PaginationItem key="ellipsis-end">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+      items.push(
+        <PaginationItem key="last">
+          <PaginationLink onClick={() => onPageChange(totalPgs)}>
+            {totalPgs}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    return items;
+  };
+
+  // Reusable kanji card renderer
+  const renderKanjiCard = (k, index) => (
+    <Card
+      key={k.id}
+      className="kanji-card overflow-hidden animate-fade-in"
+      style={{ animationDelay: `${index * 30}ms` }}
+    >
+      <CardContent className="p-0">
+        {/* Main Kanji Row */}
+        <div className="p-5 flex items-center gap-4">
+          {/* Kanji Character */}
+          <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center bg-secondary/50 rounded-xl">
+            <span className="text-5xl kanji-display text-foreground">
+              {k.character}
+            </span>
+          </div>
+
+          {/* Kanji Info */}
+          <div className="flex-grow min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`jlpt-badge ${getJlptBadgeClass(k.jlpt_level)}`}>
+                {k.jlpt_level}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Level {k.level}
+              </span>
+            </div>
+
+            {/* Revealed Content */}
+            {revealedCards[k.id] ? (
+              <div className="animate-fade-in">
+                <p className="font-medium text-foreground mb-1">
+                  {getPrimaryMeaning(k.meanings)}
+                </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm mb-3">
+                  {getPrimaryReading(k.readings, 'onyomi') && (
+                    <span className="text-muted-foreground">
+                      <span className="text-accent">音</span>{' '}
+                      {getPrimaryReading(k.readings, 'onyomi')}
+                    </span>
+                  )}
+                  {getPrimaryReading(k.readings, 'kunyomi') && (
+                    <span className="text-muted-foreground">
+                      <span className="text-primary">訓</span>{' '}
+                      {getPrimaryReading(k.readings, 'kunyomi')}
+                    </span>
+                  )}
+                </div>
+                {/* Vocabulary words using this kanji */}
+                {k.vocabulary && k.vocabulary.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-border/50">
+                    <p className="text-xs text-muted-foreground mb-1.5">Words using this kanji:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {k.vocabulary.map((vocab) => (
+                        <span
+                          key={vocab.id}
+                          className="inline-flex items-center gap-1.5 px-2 py-1 bg-secondary/70 rounded text-xs"
+                        >
+                          <span className="font-japanese font-medium text-foreground">{vocab.characters}</span>
+                          <span className="text-muted-foreground">({vocab.readings[0]})</span>
+                          <span className="text-foreground/80">- {vocab.meanings[0]}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Click the eye to reveal meaning & reading
+              </p>
+            )}
+          </div>
+
+          {/* Reveal Button and Studied Checkbox */}
+          <div className="flex flex-col items-center gap-2 flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="reveal-btn"
+              onClick={() => toggleReveal(k.id)}
+              aria-label={revealedCards[k.id] ? 'Hide details' : 'Show details'}
+            >
+              {revealedCards[k.id] ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
+            </Button>
+            <label className="flex items-center gap-1.5 cursor-pointer group">
+              <Checkbox
+                checked={studiedKanji[k.id] || false}
+                onCheckedChange={() => toggleStudied(k.id)}
+                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              />
+              <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                Studied
+              </span>
+            </label>
+          </div>
+        </div>
+
+        {/* Mnemonic Dropdown */}
+        <Collapsible
+          open={openMnemonics[k.id]}
+          onOpenChange={() => toggleMnemonic(k.id)}
+        >
+          <CollapsibleTrigger asChild>
+            <button className="w-full px-5 py-3 flex items-center justify-between text-sm text-muted-foreground hover:bg-muted/50 border-t border-border transition-colors">
+              <span>Mnemonic</span>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform duration-200 ${
+                  openMnemonics[k.id] ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-5 pb-5">
+              {/* Radicals Section */}
+              {k.radicals && k.radicals.length > 0 && (
+                <div className="mnemonic-content mb-3">
+                  <p className="font-medium text-foreground text-sm mb-2">
+                    Radicals
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {k.radicals.map((radical) => (
+                      <span
+                        key={radical.id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-accent/10 border border-accent/20 rounded-md text-sm"
+                      >
+                        {radical.character ? (
+                          <span className="font-japanese text-base text-accent">{radical.character}</span>
+                        ) : (
+                          <span className="text-accent">◯</span>
+                        )}
+                        <span className="text-foreground font-medium">{radical.meaning}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {k.meaning_mnemonic && (
+                <div className="mnemonic-content">
+                  <p className="font-medium text-foreground text-sm mb-2">
+                    Meaning Mnemonic
+                  </p>
+                  <p
+                    className="text-muted-foreground"
+                    dangerouslySetInnerHTML={{
+                      __html: k.meaning_mnemonic.replace(
+                        /<radical>|<kanji>|<vocabulary>|<reading>/g,
+                        '<span class="text-accent font-medium">'
+                      ).replace(
+                        /<\/radical>|<\/kanji>|<\/vocabulary>|<\/reading>/g,
+                        '</span>'
+                      ),
+                    }}
+                  />
+                </div>
+              )}
+              {k.reading_mnemonic && (
+                <div className="mnemonic-content mt-3">
+                  <p className="font-medium text-foreground text-sm mb-2">
+                    Reading Mnemonic
+                  </p>
+                  <p
+                    className="text-muted-foreground"
+                    dangerouslySetInnerHTML={{
+                      __html: k.reading_mnemonic.replace(
+                        /<radical>|<kanji>|<vocabulary>|<reading>/g,
+                        '<span class="text-accent font-medium">'
+                      ).replace(
+                        /<\/radical>|<\/kanji>|<\/vocabulary>|<\/reading>/g,
+                        '</span>'
+                      ),
+                    }}
+                  />
+                </div>
+              )}
+              {!k.meaning_mnemonic && !k.reading_mnemonic && (
+                <p className="text-muted-foreground text-sm py-2">
+                  No mnemonics available for this kanji.
+                </p>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </CardContent>
+    </Card>
+  );
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
 
