@@ -444,6 +444,7 @@ export default function KanjiFlashcards() {
       setRevisionSets(updatedSets);
       setRevisionSetsStorage(updatedSets);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getPrimaryMeaning = (meanings) => {
