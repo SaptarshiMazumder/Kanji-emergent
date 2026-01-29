@@ -339,84 +339,6 @@ async def get_kanji(
         raise HTTPException(status_code=500, detail=f"Error connecting to WaniKani API: {str(e)}")
 
 
-@api_router.get("/kanji/{kanji_id}")
-async def get_kanji_by_id(kanji_id: int):
-    """
-    Fetch a specific kanji by its ID from WaniKani API.
-    """
-    if not WANIKANI_API_KEY:
-        raise HTTPException(status_code=500, detail="WaniKani API key not configured")
-    
-    headers = {
-        "Authorization": f"Bearer {WANIKANI_API_KEY}",
-        "Wanikani-Revision": "20170710"
-    }
-    
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as http_client:
-            response = await http_client.get(
-                f"{WANIKANI_BASE_URL}/subjects/{kanji_id}",
-                headers=headers
-            )
-            
-            if response.status_code == 404:
-                raise HTTPException(status_code=404, detail="Kanji not found")
-            
-            if response.status_code != 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"WaniKani API error: {response.text}"
-                )
-            
-            item = response.json()
-            item_data = item.get("data", {})
-            
-            meanings = [
-                KanjiMeaning(
-                    meaning=m.get("meaning", ""),
-                    primary=m.get("primary", False)
-                )
-                for m in item_data.get("meanings", [])
-            ]
-            
-            readings = [
-                KanjiReading(
-                    reading=r.get("reading", ""),
-                    primary=r.get("primary", False),
-                    type=r.get("type", "onyomi")
-                )
-                for r in item_data.get("readings", [])
-            ]
-            
-            wanikani_level = item_data.get("level", 1)
-            
-            # Extract context sentences
-            context_sentences = [
-                ContextSentence(
-                    ja=cs.get("ja", ""),
-                    en=cs.get("en", "")
-                )
-                for cs in item_data.get("context_sentences", [])
-            ]
-            
-            return KanjiSubject(
-                id=item.get("id", 0),
-                character=item_data.get("characters", ""),
-                meanings=meanings,
-                readings=readings,
-                level=wanikani_level,
-                meaning_mnemonic=item_data.get("meaning_mnemonic", ""),
-                reading_mnemonic=item_data.get("reading_mnemonic", ""),
-                context_sentences=context_sentences,
-                jlpt_level=get_jlpt_level(wanikani_level)
-            )
-            
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Request to WaniKani API timed out")
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Error connecting to WaniKani API: {str(e)}")
-
-
 @api_router.get("/kanji/search", response_model=KanjiResponse)
 async def search_kanji(
     query: str = Query(..., min_length=1, description="Search query (kanji character, meaning, or reading)"),
@@ -611,6 +533,86 @@ async def search_kanji(
         raise HTTPException(status_code=504, detail="Request to WaniKani API timed out")
     except httpx.RequestError as e:
         logger.error(f"Request error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error connecting to WaniKani API: {str(e)}")
+
+
+
+
+@api_router.get("/kanji/{kanji_id}")
+async def get_kanji_by_id(kanji_id: int):
+    """
+    Fetch a specific kanji by its ID from WaniKani API.
+    """
+    if not WANIKANI_API_KEY:
+        raise HTTPException(status_code=500, detail="WaniKani API key not configured")
+    
+    headers = {
+        "Authorization": f"Bearer {WANIKANI_API_KEY}",
+        "Wanikani-Revision": "20170710"
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as http_client:
+            response = await http_client.get(
+                f"{WANIKANI_BASE_URL}/subjects/{kanji_id}",
+                headers=headers
+            )
+            
+            if response.status_code == 404:
+                raise HTTPException(status_code=404, detail="Kanji not found")
+            
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"WaniKani API error: {response.text}"
+                )
+            
+            item = response.json()
+            item_data = item.get("data", {})
+            
+            meanings = [
+                KanjiMeaning(
+                    meaning=m.get("meaning", ""),
+                    primary=m.get("primary", False)
+                )
+                for m in item_data.get("meanings", [])
+            ]
+            
+            readings = [
+                KanjiReading(
+                    reading=r.get("reading", ""),
+                    primary=r.get("primary", False),
+                    type=r.get("type", "onyomi")
+                )
+                for r in item_data.get("readings", [])
+            ]
+            
+            wanikani_level = item_data.get("level", 1)
+            
+            # Extract context sentences
+            context_sentences = [
+                ContextSentence(
+                    ja=cs.get("ja", ""),
+                    en=cs.get("en", "")
+                )
+                for cs in item_data.get("context_sentences", [])
+            ]
+            
+            return KanjiSubject(
+                id=item.get("id", 0),
+                character=item_data.get("characters", ""),
+                meanings=meanings,
+                readings=readings,
+                level=wanikani_level,
+                meaning_mnemonic=item_data.get("meaning_mnemonic", ""),
+                reading_mnemonic=item_data.get("reading_mnemonic", ""),
+                context_sentences=context_sentences,
+                jlpt_level=get_jlpt_level(wanikani_level)
+            )
+            
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Request to WaniKani API timed out")
+    except httpx.RequestError as e:
         raise HTTPException(status_code=500, detail=f"Error connecting to WaniKani API: {str(e)}")
 
 
