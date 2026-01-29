@@ -160,11 +160,11 @@ async def get_kanji(
         levels = JLPT_LEVEL_MAPPING[jlpt_level.upper()]
         levels_param = f"&levels={','.join(map(str, levels))}"
     
-    all_kanji = []
+    all_kanji_raw = []  # Store raw data with amalgamation IDs
     next_url = f"{WANIKANI_BASE_URL}/subjects?types=kanji{levels_param}"
     
     try:
-        async with httpx.AsyncClient(timeout=30.0) as http_client:
+        async with httpx.AsyncClient(timeout=60.0) as http_client:
             # Fetch all kanji (WaniKani returns paginated results)
             while next_url:
                 response = await http_client.get(next_url, headers=headers)
@@ -180,59 +180,101 @@ async def get_kanji(
                 
                 for item in data.get("data", []):
                     item_data = item.get("data", {})
-                    
-                    # Extract meanings
-                    meanings = [
-                        KanjiMeaning(
-                            meaning=m.get("meaning", ""),
-                            primary=m.get("primary", False)
-                        )
-                        for m in item_data.get("meanings", [])
-                    ]
-                    
-                    # Extract readings
-                    readings = [
-                        KanjiReading(
-                            reading=r.get("reading", ""),
-                            primary=r.get("primary", False),
-                            type=r.get("type", "onyomi")
-                        )
-                        for r in item_data.get("readings", [])
-                    ]
-                    
-                    wanikani_level = item_data.get("level", 1)
-                    
-                    # Extract context sentences
-                    context_sentences = [
-                        ContextSentence(
-                            ja=cs.get("ja", ""),
-                            en=cs.get("en", "")
-                        )
-                        for cs in item_data.get("context_sentences", [])
-                    ]
-                    
-                    kanji_subject = KanjiSubject(
-                        id=item.get("id", 0),
-                        character=item_data.get("characters", ""),
-                        meanings=meanings,
-                        readings=readings,
-                        level=wanikani_level,
-                        meaning_mnemonic=item_data.get("meaning_mnemonic", ""),
-                        reading_mnemonic=item_data.get("reading_mnemonic", ""),
-                        context_sentences=context_sentences,
-                        jlpt_level=get_jlpt_level(wanikani_level)
-                    )
-                    all_kanji.append(kanji_subject)
+                    all_kanji_raw.append({
+                        "id": item.get("id", 0),
+                        "data": item_data,
+                        "amalgamation_ids": item_data.get("amalgamation_subject_ids", [])
+                    })
                 
                 # Check for next page
                 next_url = data.get("pages", {}).get("next_url")
-        
-        # Apply pagination
-        total_count = len(all_kanji)
-        total_pages = (total_count + per_page - 1) // per_page
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        paginated_kanji = all_kanji[start_idx:end_idx]
+            
+            # Apply pagination first to get the kanji we need
+            total_count = len(all_kanji_raw)
+            total_pages = (total_count + per_page - 1) // per_page
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            paginated_raw = all_kanji_raw[start_idx:end_idx]
+            
+            # Collect all vocabulary IDs we need to fetch (limit to 5 per kanji for performance)
+            vocab_ids_to_fetch = set()
+            for kanji_raw in paginated_raw:
+                vocab_ids = kanji_raw["amalgamation_ids"][:5]  # Limit to 5 vocab per kanji
+                vocab_ids_to_fetch.update(vocab_ids)
+            
+            # Fetch vocabulary in batch if we have any
+            vocab_map = {}
+            if vocab_ids_to_fetch:
+                vocab_ids_str = ",".join(map(str, vocab_ids_to_fetch))
+                vocab_url = f"{WANIKANI_BASE_URL}/subjects?ids={vocab_ids_str}"
+                vocab_response = await http_client.get(vocab_url, headers=headers)
+                
+                if vocab_response.status_code == 200:
+                    vocab_data = vocab_response.json()
+                    for v_item in vocab_data.get("data", []):
+                        v_id = v_item.get("id")
+                        v_data = v_item.get("data", {})
+                        vocab_map[v_id] = VocabWord(
+                            id=v_id,
+                            characters=v_data.get("characters", ""),
+                            meanings=[m.get("meaning", "") for m in v_data.get("meanings", []) if m.get("primary")],
+                            readings=[r.get("reading", "") for r in v_data.get("readings", []) if r.get("primary")]
+                        )
+            
+            # Build final kanji objects with vocabulary
+            paginated_kanji = []
+            for kanji_raw in paginated_raw:
+                item_data = kanji_raw["data"]
+                
+                # Extract meanings
+                meanings = [
+                    KanjiMeaning(
+                        meaning=m.get("meaning", ""),
+                        primary=m.get("primary", False)
+                    )
+                    for m in item_data.get("meanings", [])
+                ]
+                
+                # Extract readings
+                readings = [
+                    KanjiReading(
+                        reading=r.get("reading", ""),
+                        primary=r.get("primary", False),
+                        type=r.get("type", "onyomi")
+                    )
+                    for r in item_data.get("readings", [])
+                ]
+                
+                wanikani_level = item_data.get("level", 1)
+                
+                # Extract context sentences
+                context_sentences = [
+                    ContextSentence(
+                        ja=cs.get("ja", ""),
+                        en=cs.get("en", "")
+                    )
+                    for cs in item_data.get("context_sentences", [])
+                ]
+                
+                # Get vocabulary for this kanji
+                vocab_list = []
+                for v_id in kanji_raw["amalgamation_ids"][:5]:
+                    if v_id in vocab_map:
+                        vocab_list.append(vocab_map[v_id])
+                
+                kanji_subject = KanjiSubject(
+                    id=kanji_raw["id"],
+                    character=item_data.get("characters", ""),
+                    meanings=meanings,
+                    readings=readings,
+                    level=wanikani_level,
+                    meaning_mnemonic=item_data.get("meaning_mnemonic", ""),
+                    reading_mnemonic=item_data.get("reading_mnemonic", ""),
+                    context_sentences=context_sentences,
+                    vocabulary=vocab_list,
+                    jlpt_level=get_jlpt_level(wanikani_level)
+                )
+                paginated_kanji.append(kanji_subject)
         
         return KanjiResponse(
             kanji=paginated_kanji,
