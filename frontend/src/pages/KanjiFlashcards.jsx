@@ -308,7 +308,7 @@ export default function KanjiFlashcards() {
                             <p className="font-medium text-foreground mb-1">
                               {getPrimaryMeaning(k.meanings)}
                             </p>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm mb-3">
                               {getPrimaryReading(k.readings, 'onyomi') && (
                                 <span className="text-muted-foreground">
                                   <span className="text-accent">音</span>{' '}
@@ -322,6 +322,24 @@ export default function KanjiFlashcards() {
                                 </span>
                               )}
                             </div>
+                            {/* Vocabulary words using this kanji */}
+                            {k.vocabulary && k.vocabulary.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-border/50">
+                                <p className="text-xs text-muted-foreground mb-1.5">Words using this kanji:</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {k.vocabulary.map((vocab) => (
+                                    <span
+                                      key={vocab.id}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-secondary/70 rounded text-xs"
+                                      title={`${vocab.meanings.join(', ')} - ${vocab.readings.join(', ')}`}
+                                    >
+                                      <span className="font-japanese font-medium text-foreground">{vocab.characters}</span>
+                                      <span className="text-muted-foreground">({vocab.readings[0]})</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <p className="text-muted-foreground text-sm">
