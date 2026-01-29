@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, EyeOff, ChevronDown, Loader2, BookOpen, Filter, Check } from 'lucide-react';
+import { Eye, EyeOff, ChevronDown, Loader2, BookOpen, Filter, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
+import { Input } from '../components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -58,6 +60,7 @@ const setStudiedKanjiStorage = (studied) => {
 };
 
 export default function KanjiFlashcards() {
+  // Browse tab state
   const [kanji, setKanji] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -65,6 +68,21 @@ export default function KanjiFlashcards() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  
+  // Search tab state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchTotalPages, setSearchTotalPages] = useState(1);
+  const [searchTotalCount, setSearchTotalCount] = useState(0);
+  const [hasSearched, setHasSearched] = useState(false);
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState('browse');
+  
+  // Shared state
   const [revealedCards, setRevealedCards] = useState({});
   const [openMnemonics, setOpenMnemonics] = useState({});
   const [studiedKanji, setStudiedKanji] = useState(getStudiedKanji);
