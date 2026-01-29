@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, EyeOff, ChevronDown, Loader2, BookOpen, Filter, Search, X, RotateCcw, Check, ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
+import { Eye, EyeOff, ChevronDown, Loader2, BookOpen, Filter, Search, X, RotateCcw, Check, ChevronLeft, ChevronRight, Calendar, Clock, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -7,6 +7,17 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
