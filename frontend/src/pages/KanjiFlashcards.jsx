@@ -269,16 +269,182 @@ export default function KanjiFlashcards() {
     }));
   };
 
-  const toggleStudied = (kanjiId) => {
+  // Function to create a new revision set
+  const createRevisionSet = useCallback((kanjiList) => {
+    const newSet = {
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      lastTouched: new Date().toISOString(),
+      kanjiIds: kanjiList,
+      completed: false,
+      knewIt: {}
+    };
+    
+    setRevisionSets(prev => {
+      const updated = [...prev, newSet];
+      setRevisionSetsStorage(updated);
+      return updated;
+    });
+    
+    toast.success('New revision set created!', {
+      description: `${kanjiList.length} kanji added to revision`
+    });
+    
+    return newSet;
+  }, []);
+
+  const toggleStudied = (kanjiId, kanjiData = null) => {
     setStudiedKanji((prev) => {
+      const wasStudied = prev[kanjiId];
       const newStudied = {
         ...prev,
-        [kanjiId]: !prev[kanjiId],
+        [kanjiId]: !wasStudied,
       };
       setStudiedKanjiStorage(newStudied);
+      
+      // If marking as studied (not unmarking), track for revision
+      if (!wasStudied && kanjiData) {
+        setPendingStudied(prevPending => {
+          // Check if already in pending
+          if (prevPending.some(k => k.id === kanjiId)) {
+            return prevPending;
+          }
+          
+          const newPending = [...prevPending, {
+            id: kanjiId,
+            character: kanjiData.character,
+            meanings: kanjiData.meanings,
+            readings: kanjiData.readings,
+            vocabulary: kanjiData.vocabulary || [],
+            jlpt_level: kanjiData.jlpt_level,
+            level: kanjiData.level
+          }];
+          
+          setPendingStudiedStorage(newPending);
+          
+          // Check if we have 20 kanji - create a revision set
+          if (newPending.length >= REVISION_SET_SIZE) {
+            const kanjiForSet = newPending.slice(0, REVISION_SET_SIZE);
+            createRevisionSet(kanjiForSet);
+            
+            // Clear the used kanji from pending
+            const remaining = newPending.slice(REVISION_SET_SIZE);
+            setPendingStudiedStorage(remaining);
+            return remaining;
+          }
+          
+          return newPending;
+        });
+      }
+      
       return newStudied;
     });
   };
+
+  // Revision set functions
+  const openRevisionSet = (set) => {
+    // Update last touched time
+    const updatedSets = revisionSets.map(s => 
+      s.id === set.id 
+        ? { ...s, lastTouched: new Date().toISOString() }
+        : s
+    );
+    setRevisionSets(updatedSets);
+    setRevisionSetsStorage(updatedSets);
+    
+    setActiveRevisionSet(set);
+    setCurrentFlashcardIndex(0);
+    setFlippedCards({});
+    setKnewItCards(set.knewIt || {});
+  };
+
+  const closeRevisionSet = () => {
+    // Save knewIt state
+    if (activeRevisionSet) {
+      const updatedSets = revisionSets.map(s =>
+        s.id === activeRevisionSet.id
+          ? { ...s, knewIt: knewItCards, lastTouched: new Date().toISOString() }
+          : s
+      );
+      setRevisionSets(updatedSets);
+      setRevisionSetsStorage(updatedSets);
+    }
+    
+    setActiveRevisionSet(null);
+    setCurrentFlashcardIndex(0);
+    setFlippedCards({});
+  };
+
+  const toggleFlipCard = (kanjiId) => {
+    setFlippedCards(prev => ({
+      ...prev,
+      [kanjiId]: !prev[kanjiId]
+    }));
+  };
+
+  const toggleKnewIt = (kanjiId) => {
+    setKnewItCards(prev => {
+      const newKnewIt = {
+        ...prev,
+        [kanjiId]: !prev[kanjiId]
+      };
+      
+      // Also update the revision set
+      if (activeRevisionSet) {
+        const updatedSets = revisionSets.map(s =>
+          s.id === activeRevisionSet.id
+            ? { ...s, knewIt: newKnewIt, lastTouched: new Date().toISOString() }
+            : s
+        );
+        setRevisionSets(updatedSets);
+        setRevisionSetsStorage(updatedSets);
+      }
+      
+      return newKnewIt;
+    });
+  };
+
+  const markSetComplete = (setId) => {
+    const updatedSets = revisionSets.map(s =>
+      s.id === setId
+        ? { ...s, completed: true, lastTouched: new Date().toISOString() }
+        : s
+    );
+    setRevisionSets(updatedSets);
+    setRevisionSetsStorage(updatedSets);
+    
+    toast.success('Revision set marked as complete!');
+  };
+
+  const nextFlashcard = () => {
+    if (activeRevisionSet && currentFlashcardIndex < activeRevisionSet.kanjiIds.length - 1) {
+      setCurrentFlashcardIndex(prev => prev + 1);
+      setFlippedCards({});
+    }
+  };
+
+  const prevFlashcard = () => {
+    if (currentFlashcardIndex > 0) {
+      setCurrentFlashcardIndex(prev => prev - 1);
+      setFlippedCards({});
+    }
+  };
+
+  // Check for expired completions on mount
+  useEffect(() => {
+    const updatedSets = revisionSets.map(s => {
+      if (s.completed && isCompletionExpired(s.lastTouched)) {
+        return { ...s, completed: false };
+      }
+      return s;
+    });
+    
+    const hasChanges = updatedSets.some((s, i) => s.completed !== revisionSets[i]?.completed);
+    if (hasChanges) {
+      setRevisionSets(updatedSets);
+      setRevisionSetsStorage(updatedSets);
+    }
+  }, []);
 
   const getPrimaryMeaning = (meanings) => {
     const primary = meanings.find((m) => m.primary);
