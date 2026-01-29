@@ -191,7 +191,8 @@ async def get_kanji(
                     all_kanji_raw.append({
                         "id": item.get("id", 0),
                         "data": item_data,
-                        "amalgamation_ids": item_data.get("amalgamation_subject_ids", [])
+                        "amalgamation_ids": item_data.get("amalgamation_subject_ids", []),
+                        "component_ids": item_data.get("component_subject_ids", [])
                     })
                 
                 # Check for next page
