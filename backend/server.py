@@ -60,6 +60,11 @@ class KanjiMeaning(BaseModel):
     primary: bool
 
 
+class ContextSentence(BaseModel):
+    ja: str
+    en: str
+
+
 class KanjiSubject(BaseModel):
     id: int
     character: str
@@ -68,6 +73,7 @@ class KanjiSubject(BaseModel):
     level: int
     meaning_mnemonic: Optional[str] = None
     reading_mnemonic: Optional[str] = None
+    context_sentences: List[ContextSentence] = []
     jlpt_level: Optional[str] = None
 
 
@@ -188,6 +194,15 @@ async def get_kanji(
                     
                     wanikani_level = item_data.get("level", 1)
                     
+                    # Extract context sentences
+                    context_sentences = [
+                        ContextSentence(
+                            ja=cs.get("ja", ""),
+                            en=cs.get("en", "")
+                        )
+                        for cs in item_data.get("context_sentences", [])
+                    ]
+                    
                     kanji_subject = KanjiSubject(
                         id=item.get("id", 0),
                         character=item_data.get("characters", ""),
@@ -196,6 +211,7 @@ async def get_kanji(
                         level=wanikani_level,
                         meaning_mnemonic=item_data.get("meaning_mnemonic", ""),
                         reading_mnemonic=item_data.get("reading_mnemonic", ""),
+                        context_sentences=context_sentences,
                         jlpt_level=get_jlpt_level(wanikani_level)
                     )
                     all_kanji.append(kanji_subject)
