@@ -257,6 +257,7 @@ export default function KanjiFlashcards() {
     const newPages = { ...pagesByLevel, [selectedLevel]: currentPage };
     setPagesByLevel(newPages);
     setBrowseStateStorage({ level: selectedLevel, pages: newPages });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLevel, currentPage]);
 
   const handleLevelChange = (value) => {
