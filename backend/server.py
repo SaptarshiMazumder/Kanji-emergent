@@ -292,6 +292,15 @@ async def get_kanji_by_id(kanji_id: int):
             
             wanikani_level = item_data.get("level", 1)
             
+            # Extract context sentences
+            context_sentences = [
+                ContextSentence(
+                    ja=cs.get("ja", ""),
+                    en=cs.get("en", "")
+                )
+                for cs in item_data.get("context_sentences", [])
+            ]
+            
             return KanjiSubject(
                 id=item.get("id", 0),
                 character=item_data.get("characters", ""),
@@ -300,6 +309,7 @@ async def get_kanji_by_id(kanji_id: int):
                 level=wanikani_level,
                 meaning_mnemonic=item_data.get("meaning_mnemonic", ""),
                 reading_mnemonic=item_data.get("reading_mnemonic", ""),
+                context_sentences=context_sentences,
                 jlpt_level=get_jlpt_level(wanikani_level)
             )
             
