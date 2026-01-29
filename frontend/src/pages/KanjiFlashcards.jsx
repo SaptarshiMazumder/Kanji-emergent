@@ -105,6 +105,22 @@ const setRevisionSetsStorage = (sets) => {
   } catch {}
 };
 
+// Helper to get/set browse state (filter level and page per level)
+const getBrowseState = () => {
+  try {
+    const stored = localStorage.getItem('browseState');
+    return stored ? JSON.parse(stored) : { level: 'N2', pages: {} };
+  } catch {
+    return { level: 'N2', pages: {} };
+  }
+};
+
+const setBrowseStateStorage = (state) => {
+  try {
+    localStorage.setItem('browseState', JSON.stringify(state));
+  } catch {}
+};
+
 // Check if completion has expired (3+ days since last touched)
 const isCompletionExpired = (lastTouchedDate) => {
   if (!lastTouchedDate) return true;
@@ -124,13 +140,17 @@ const formatDate = (dateString) => {
   });
 };
 
+// Get initial browse state from localStorage
+const initialBrowseState = getBrowseState();
+
 export default function KanjiFlashcards() {
   // Browse tab state
   const [kanji, setKanji] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedLevel, setSelectedLevel] = useState('N2'); // Default to N2
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedLevel, setSelectedLevel] = useState(initialBrowseState.level);
+  const [currentPage, setCurrentPage] = useState(initialBrowseState.pages[initialBrowseState.level] || 1);
+  const [pagesByLevel, setPagesByLevel] = useState(initialBrowseState.pages);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   
