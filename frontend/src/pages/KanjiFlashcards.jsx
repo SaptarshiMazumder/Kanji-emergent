@@ -790,6 +790,15 @@ export default function KanjiFlashcards() {
                   </span>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="revisions" className="gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Revisions
+                {revisionSets.length > 0 && (
+                  <span className="ml-1 text-xs bg-primary/20 px-1.5 py-0.5 rounded">
+                    {revisionSets.length}
+                  </span>
+                )}
+              </TabsTrigger>
             </TabsList>
             
             {/* JLPT Filter - only show on Browse tab */}
