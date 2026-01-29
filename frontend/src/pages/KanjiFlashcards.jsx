@@ -427,6 +427,14 @@ export default function KanjiFlashcards() {
     toast.success('Revision set marked as complete!');
   };
 
+  const deleteRevisionSet = (setId) => {
+    const updatedSets = revisionSets.filter(s => s.id !== setId);
+    setRevisionSets(updatedSets);
+    setRevisionSetsStorage(updatedSets);
+    
+    toast.success('Revision set deleted');
+  };
+
   const nextFlashcard = () => {
     if (activeRevisionSet && currentFlashcardIndex < activeRevisionSet.kanjiIds.length - 1) {
       setCurrentFlashcardIndex(prev => prev + 1);
