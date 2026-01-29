@@ -252,9 +252,21 @@ export default function KanjiFlashcards() {
     fetchKanji();
   }, [fetchKanji]);
 
+  // Save browse state to localStorage whenever level or page changes
+  useEffect(() => {
+    const newPages = { ...pagesByLevel, [selectedLevel]: currentPage };
+    setPagesByLevel(newPages);
+    setBrowseStateStorage({ level: selectedLevel, pages: newPages });
+  }, [selectedLevel, currentPage]);
+
   const handleLevelChange = (value) => {
+    // Save current page for current level before switching
+    const newPages = { ...pagesByLevel, [selectedLevel]: currentPage };
+    setPagesByLevel(newPages);
+    
+    // Switch to new level and restore its saved page (or default to 1)
     setSelectedLevel(value);
-    setCurrentPage(1);
+    setCurrentPage(newPages[value] || 1);
   };
 
   const handlePageChange = (page) => {
