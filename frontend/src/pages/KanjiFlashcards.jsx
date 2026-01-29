@@ -1249,12 +1249,46 @@ export default function KanjiFlashcards() {
                                   Set #{revisionSets.length - index}
                                 </p>
                               </div>
-                              {displayCompleted && (
-                                <Badge className="bg-green-600 text-white">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  Complete
-                                </Badge>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {displayCompleted && (
+                                  <Badge className="bg-green-600 text-white">
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Complete
+                                  </Badge>
+                                )}
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Revision Set?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This will permanently delete the revision set from {formatDate(set.createdAt)} with {set.kanjiIds.length} kanji. This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          deleteRevisionSet(set.id);
+                                        }}
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
                             </div>
                             
                             {/* Kanji preview */}
