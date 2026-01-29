@@ -300,6 +300,12 @@ async def get_kanji(
                     if v_id in vocab_map:
                         vocab_list.append(vocab_map[v_id])
                 
+                # Get radicals for this kanji
+                radical_list = []
+                for r_id in kanji_raw["component_ids"]:
+                    if r_id in radical_map:
+                        radical_list.append(radical_map[r_id])
+                
                 kanji_subject = KanjiSubject(
                     id=kanji_raw["id"],
                     character=item_data.get("characters", ""),
@@ -310,6 +316,7 @@ async def get_kanji(
                     reading_mnemonic=item_data.get("reading_mnemonic", ""),
                     context_sentences=context_sentences,
                     vocabulary=vocab_list,
+                    radicals=radical_list,
                     jlpt_level=get_jlpt_level(wanikani_level)
                 )
                 paginated_kanji.append(kanji_subject)
