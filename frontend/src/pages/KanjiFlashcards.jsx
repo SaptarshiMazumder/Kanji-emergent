@@ -620,7 +620,7 @@ export default function KanjiFlashcards() {
             <label className="flex items-center gap-1.5 cursor-pointer group">
               <Checkbox
                 checked={studiedKanji[k.id] || false}
-                onCheckedChange={() => toggleStudied(k.id)}
+                onCheckedChange={() => toggleStudied(k.id, k)}
                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
               />
               <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
