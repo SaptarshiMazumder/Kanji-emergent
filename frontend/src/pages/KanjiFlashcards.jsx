@@ -121,6 +121,40 @@ export default function KanjiFlashcards() {
     }
   }, [selectedLevel, currentPage]);
 
+  // Search function
+  const searchKanji = useCallback(async (query, page = 1) => {
+    if (!query.trim()) return;
+    
+    setSearchLoading(true);
+    setSearchError(null);
+    setHasSearched(true);
+    
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/kanji/search?query=${encodeURIComponent(query)}&page=${page}&per_page=${ITEMS_PER_PAGE}`
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Search failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setSearchResults(data.kanji);
+      setSearchTotalPages(data.total_pages);
+      setSearchTotalCount(data.total_count);
+      setSearchPage(page);
+    } catch (err) {
+      console.error('Error searching kanji:', err);
+      setSearchError(err.message);
+      toast.error('Search failed', {
+        description: err.message,
+      });
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchKanji();
   }, [fetchKanji]);
@@ -135,6 +169,28 @@ export default function KanjiFlashcards() {
       setCurrentPage(page);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  const handleSearchPageChange = (page) => {
+    if (page >= 1 && page <= searchTotalPages) {
+      searchKanji(searchQuery, page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setActiveTab('search');
+      searchKanji(searchQuery, 1);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setHasSearched(false);
+    setActiveTab('browse');
   };
 
   const toggleReveal = (kanjiId) => {
