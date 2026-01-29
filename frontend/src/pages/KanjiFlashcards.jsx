@@ -381,6 +381,29 @@ export default function KanjiFlashcards() {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="px-5 pb-5">
+                          {/* Radicals Section */}
+                          {k.radicals && k.radicals.length > 0 && (
+                            <div className="mnemonic-content mb-3">
+                              <p className="font-medium text-foreground text-sm mb-2">
+                                Radicals
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {k.radicals.map((radical) => (
+                                  <span
+                                    key={radical.id}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-accent/10 border border-accent/20 rounded-md text-sm"
+                                  >
+                                    {radical.character ? (
+                                      <span className="font-japanese text-base text-accent">{radical.character}</span>
+                                    ) : (
+                                      <span className="text-accent">◯</span>
+                                    )}
+                                    <span className="text-foreground font-medium">{radical.meaning}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                           {k.meaning_mnemonic && (
                             <div className="mnemonic-content">
                               <p className="font-medium text-foreground text-sm mb-2">
