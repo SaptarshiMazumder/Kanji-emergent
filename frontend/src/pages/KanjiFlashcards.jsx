@@ -491,63 +491,298 @@ export default function KanjiFlashcards() {
       </CardContent>
     </Card>
   );
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-
-    if (startPage > 1) {
-      items.push(
-        <PaginationItem key="first">
-          <PaginationLink onClick={() => handlePageChange(1)}>1</PaginationLink>
-        </PaginationItem>
-      );
-      if (startPage > 2) {
-        items.push(
-          <PaginationItem key="ellipsis-start">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      items.push(
-        <PaginationItem key={i}>
-          <PaginationLink
-            isActive={i === currentPage}
-            onClick={() => handlePageChange(i)}
-          >
-            {i}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        items.push(
-          <PaginationItem key="ellipsis-end">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-      items.push(
-        <PaginationItem key="last">
-          <PaginationLink onClick={() => handlePageChange(totalPages)}>
-            {totalPages}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-
-    return items;
-  };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="page-header">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col gap-4">
+            {/* Top row: Title and Search */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <BookOpen className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-semibold text-foreground font-japanese">
+                    漢字フラッシュカード
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    WaniKani Kanji Flashcards
+                  </p>
+                </div>
+              </div>
+              
+              {/* Search Bar */}
+              <form onSubmit={handleSearch} className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow sm:flex-grow-0 sm:w-[280px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Search kanji, meaning, or reading..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-8"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={clearSearch}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
+                    >
+                      <X className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
+                <Button type="submit" size="sm" disabled={!searchQuery.trim()}>
+                  Search
+                </Button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content with Tabs */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <TabsList>
+              <TabsTrigger value="browse" className="gap-2">
+                <BookOpen className="h-4 w-4" />
+                Browse
+              </TabsTrigger>
+              <TabsTrigger value="search" className="gap-2" disabled={!hasSearched}>
+                <Search className="h-4 w-4" />
+                Search Results
+                {hasSearched && searchTotalCount > 0 && (
+                  <span className="ml-1 text-xs bg-primary/20 px-1.5 py-0.5 rounded">
+                    {searchTotalCount}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* JLPT Filter - only show on Browse tab */}
+            {activeTab === 'browse' && (
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={selectedLevel} onValueChange={handleLevelChange}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select JLPT Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {JLPT_LEVELS.map((level) => (
+                      <SelectItem key={level.value} value={level.value}>
+                        {level.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {/* Browse Tab Content */}
+          <TabsContent value="browse" className="mt-0">
+            {/* Stats Bar */}
+            {!loading && !error && (
+              <div className="mb-6 flex items-center justify-between text-sm text-muted-foreground">
+                <span>
+                  Showing {kanji.length} of {totalCount} kanji
+                  {selectedLevel !== 'all' && ` (${selectedLevel})`}
+                </span>
+                <span>
+                  Page {currentPage} of {totalPages}
+                </span>
+              </div>
+            )}
+
+            {/* Loading State */}
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Loading kanji...</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="bg-destructive/10 text-destructive rounded-lg p-6 max-w-md text-center">
+                  <p className="font-medium mb-2">Failed to load kanji</p>
+                  <p className="text-sm mb-4">{error}</p>
+                  <Button onClick={fetchKanji} variant="outline">
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Kanji Grid */}
+            {!loading && !error && kanji.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                  {kanji.map((k, index) => renderKanjiCard(k, index))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <Pagination className="mt-8">
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                      
+                      {renderPaginationItems(currentPage, totalPages, handlePageChange)}
+                      
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+              </>
+            )}
+
+            {/* Empty State */}
+            {!loading && !error && kanji.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="p-4 bg-muted rounded-full mb-4">
+                  <BookOpen className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-lg font-medium text-foreground mb-2">
+                  No kanji found
+                </p>
+                <p className="text-muted-foreground max-w-sm">
+                  {selectedLevel !== 'all'
+                    ? `No kanji available for ${selectedLevel} level. Try selecting a different level.`
+                    : 'No kanji available. Please check your WaniKani API configuration.'}
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Search Tab Content */}
+          <TabsContent value="search" className="mt-0">
+            {/* Search Stats Bar */}
+            {!searchLoading && !searchError && hasSearched && (
+              <div className="mb-6 flex items-center justify-between text-sm text-muted-foreground">
+                <span>
+                  Found {searchTotalCount} kanji matching "{searchQuery}"
+                </span>
+                {searchTotalPages > 1 && (
+                  <span>
+                    Page {searchPage} of {searchTotalPages}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Search Loading State */}
+            {searchLoading && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Searching kanji...</p>
+              </div>
+            )}
+
+            {/* Search Error State */}
+            {searchError && !searchLoading && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="bg-destructive/10 text-destructive rounded-lg p-6 max-w-md text-center">
+                  <p className="font-medium mb-2">Search failed</p>
+                  <p className="text-sm mb-4">{searchError}</p>
+                  <Button onClick={() => searchKanji(searchQuery, 1)} variant="outline">
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Search Results Grid */}
+            {!searchLoading && !searchError && searchResults.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                  {searchResults.map((k, index) => renderKanjiCard(k, index))}
+                </div>
+
+                {/* Search Pagination */}
+                {searchTotalPages > 1 && (
+                  <Pagination className="mt-8">
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => handleSearchPageChange(searchPage - 1)}
+                          className={searchPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                      
+                      {renderPaginationItems(searchPage, searchTotalPages, handleSearchPageChange)}
+                      
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => handleSearchPageChange(searchPage + 1)}
+                          className={searchPage === searchTotalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+              </>
+            )}
+
+            {/* No Search Results */}
+            {!searchLoading && !searchError && hasSearched && searchResults.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="p-4 bg-muted rounded-full mb-4">
+                  <Search className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-lg font-medium text-foreground mb-2">
+                  No results found
+                </p>
+                <p className="text-muted-foreground max-w-sm">
+                  No kanji found matching "{searchQuery}". Try a different search term.
+                </p>
+              </div>
+            )}
+
+            {/* Initial Search State */}
+            {!hasSearched && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="p-4 bg-muted rounded-full mb-4">
+                  <Search className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-lg font-medium text-foreground mb-2">
+                  Search for kanji
+                </p>
+                <p className="text-muted-foreground max-w-sm">
+                  Use the search bar above to find kanji by character, meaning, or reading.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border mt-auto">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <p className="text-sm text-muted-foreground text-center">
+            Powered by WaniKani API • Built for Japanese learners
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <BookOpen className="h-6 w-6 text-primary" />
