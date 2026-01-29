@@ -402,7 +402,7 @@ export default function KanjiFlashcards() {
                             </div>
                           )}
                           {/* Example Sentences Section */}
-                          {k.context_sentences && k.context_sentences.length > 0 && (
+                          {k.context_sentences && k.context_sentences.length > 0 ? (
                             <div className="mnemonic-content mt-3">
                               <p className="font-medium text-foreground text-sm mb-3">
                                 Example Sentences
@@ -420,20 +420,20 @@ export default function KanjiFlashcards() {
                                 ))}
                               </div>
                             </div>
-                          )}
-                          {k.context_sentences && k.context_sentences.length === 0 && (
+                          ) : (
                             <div className="mnemonic-content mt-3">
                               <p className="font-medium text-foreground text-sm mb-2">
                                 Example Sentences
                               </p>
                               <p className="text-muted-foreground text-sm italic">
-                                No example sentences available for this kanji.
+                                WaniKani API does not provide example sentences for individual kanji.
+                                Example sentences are only available for vocabulary items.
                               </p>
                             </div>
                           )}
-                          {!k.meaning_mnemonic && !k.reading_mnemonic && (!k.context_sentences || k.context_sentences.length === 0) && (
-                            <p className="text-muted-foreground text-sm py-2">
-                              No additional information available for this kanji.
+                          {!k.meaning_mnemonic && !k.reading_mnemonic && (
+                            <p className="text-muted-foreground text-sm py-2 mt-3">
+                              No mnemonics available for this kanji.
                             </p>
                           )}
                         </div>
