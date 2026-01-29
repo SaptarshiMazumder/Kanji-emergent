@@ -133,6 +133,17 @@ export default function KanjiFlashcards() {
     }));
   };
 
+  const toggleStudied = (kanjiId) => {
+    setStudiedKanji((prev) => {
+      const newStudied = {
+        ...prev,
+        [kanjiId]: !prev[kanjiId],
+      };
+      setStudiedKanjiStorage(newStudied);
+      return newStudied;
+    });
+  };
+
   const getPrimaryMeaning = (meanings) => {
     const primary = meanings.find((m) => m.primary);
     return primary ? primary.meaning : meanings[0]?.meaning || '';
