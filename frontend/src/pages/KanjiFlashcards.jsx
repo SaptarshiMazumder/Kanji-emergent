@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, EyeOff, ChevronDown, Loader2, BookOpen, Filter, Search, X } from 'lucide-react';
+import { Eye, EyeOff, ChevronDown, Loader2, BookOpen, Filter, Search, X, RotateCcw, Check, ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
 import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Badge } from '../components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -40,6 +41,8 @@ const JLPT_LEVELS = [
 ];
 
 const ITEMS_PER_PAGE = 20;
+const REVISION_SET_SIZE = 20;
+const COMPLETION_EXPIRY_DAYS = 3;
 
 // Helper to get/set studied kanji from localStorage
 const getStudiedKanji = () => {
@@ -57,6 +60,57 @@ const setStudiedKanjiStorage = (studied) => {
   } catch {
     // localStorage might be full or disabled
   }
+};
+
+// Helper to get/set pending studied kanji (not yet in a revision set)
+const getPendingStudied = () => {
+  try {
+    const stored = localStorage.getItem('pendingStudiedKanji');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const setPendingStudiedStorage = (pending) => {
+  try {
+    localStorage.setItem('pendingStudiedKanji', JSON.stringify(pending));
+  } catch {}
+};
+
+// Helper to get/set revision sets from localStorage
+const getRevisionSets = () => {
+  try {
+    const stored = localStorage.getItem('revisionSets');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const setRevisionSetsStorage = (sets) => {
+  try {
+    localStorage.setItem('revisionSets', JSON.stringify(sets));
+  } catch {}
+};
+
+// Check if completion has expired (3+ days since last touched)
+const isCompletionExpired = (lastTouchedDate) => {
+  if (!lastTouchedDate) return true;
+  const lastTouched = new Date(lastTouchedDate);
+  const now = new Date();
+  const diffDays = (now - lastTouched) / (1000 * 60 * 60 * 24);
+  return diffDays >= COMPLETION_EXPIRY_DAYS;
+};
+
+// Format date for display
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric',
+    year: 'numeric'
+  });
 };
 
 export default function KanjiFlashcards() {
@@ -86,6 +140,14 @@ export default function KanjiFlashcards() {
   const [revealedCards, setRevealedCards] = useState({});
   const [openMnemonics, setOpenMnemonics] = useState({});
   const [studiedKanji, setStudiedKanji] = useState(getStudiedKanji);
+  
+  // Revision tab state
+  const [revisionSets, setRevisionSets] = useState(getRevisionSets);
+  const [pendingStudied, setPendingStudied] = useState(getPendingStudied);
+  const [activeRevisionSet, setActiveRevisionSet] = useState(null);
+  const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
+  const [flippedCards, setFlippedCards] = useState({});
+  const [knewItCards, setKnewItCards] = useState({});
 
   const fetchKanji = useCallback(async () => {
     setLoading(true);
