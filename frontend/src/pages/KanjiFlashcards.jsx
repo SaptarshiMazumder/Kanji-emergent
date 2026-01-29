@@ -419,38 +419,8 @@ export default function KanjiFlashcards() {
                               />
                             </div>
                           )}
-                          {/* Example Sentences Section */}
-                          {k.context_sentences && k.context_sentences.length > 0 ? (
-                            <div className="mnemonic-content mt-3">
-                              <p className="font-medium text-foreground text-sm mb-3">
-                                Example Sentences
-                              </p>
-                              <div className="space-y-3">
-                                {k.context_sentences.map((sentence, idx) => (
-                                  <div key={idx} className="border-l-2 border-accent/30 pl-3">
-                                    <p className="text-foreground font-japanese text-base mb-1">
-                                      {sentence.ja}
-                                    </p>
-                                    <p className="text-muted-foreground text-sm">
-                                      {sentence.en}
-                                    </p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="mnemonic-content mt-3">
-                              <p className="font-medium text-foreground text-sm mb-2">
-                                Example Sentences
-                              </p>
-                              <p className="text-muted-foreground text-sm italic">
-                                WaniKani API does not provide example sentences for individual kanji.
-                                Example sentences are only available for vocabulary items.
-                              </p>
-                            </div>
-                          )}
                           {!k.meaning_mnemonic && !k.reading_mnemonic && (
-                            <p className="text-muted-foreground text-sm py-2 mt-3">
+                            <p className="text-muted-foreground text-sm py-2">
                               No mnemonics available for this kanji.
                             </p>
                           )}
