@@ -401,9 +401,39 @@ export default function KanjiFlashcards() {
                               />
                             </div>
                           )}
-                          {!k.meaning_mnemonic && !k.reading_mnemonic && (
+                          {/* Example Sentences Section */}
+                          {k.context_sentences && k.context_sentences.length > 0 && (
+                            <div className="mnemonic-content mt-3">
+                              <p className="font-medium text-foreground text-sm mb-3">
+                                Example Sentences
+                              </p>
+                              <div className="space-y-3">
+                                {k.context_sentences.map((sentence, idx) => (
+                                  <div key={idx} className="border-l-2 border-accent/30 pl-3">
+                                    <p className="text-foreground font-japanese text-base mb-1">
+                                      {sentence.ja}
+                                    </p>
+                                    <p className="text-muted-foreground text-sm">
+                                      {sentence.en}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {k.context_sentences && k.context_sentences.length === 0 && (
+                            <div className="mnemonic-content mt-3">
+                              <p className="font-medium text-foreground text-sm mb-2">
+                                Example Sentences
+                              </p>
+                              <p className="text-muted-foreground text-sm italic">
+                                No example sentences available for this kanji.
+                              </p>
+                            </div>
+                          )}
+                          {!k.meaning_mnemonic && !k.reading_mnemonic && (!k.context_sentences || k.context_sentences.length === 0) && (
                             <p className="text-muted-foreground text-sm py-2">
-                              No mnemonic available for this kanji.
+                              No additional information available for this kanji.
                             </p>
                           )}
                         </div>
