@@ -330,11 +330,11 @@ export default function KanjiFlashcards() {
                                   {k.vocabulary.map((vocab) => (
                                     <span
                                       key={vocab.id}
-                                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-secondary/70 rounded text-xs"
-                                      title={`${vocab.meanings.join(', ')} - ${vocab.readings.join(', ')}`}
+                                      className="inline-flex items-center gap-1.5 px-2 py-1 bg-secondary/70 rounded text-xs"
                                     >
                                       <span className="font-japanese font-medium text-foreground">{vocab.characters}</span>
                                       <span className="text-muted-foreground">({vocab.readings[0]})</span>
+                                      <span className="text-foreground/80">- {vocab.meanings[0]}</span>
                                     </span>
                                   ))}
                                 </div>
