@@ -1006,6 +1006,300 @@ export default function KanjiFlashcards() {
               </div>
             )}
           </TabsContent>
+
+          {/* Revisions Tab Content */}
+          <TabsContent value="revisions" className="mt-0">
+            {activeRevisionSet ? (
+              // Flashcard View
+              <div className="max-w-2xl mx-auto">
+                {/* Header with back button */}
+                <div className="flex items-center justify-between mb-6">
+                  <Button variant="ghost" onClick={closeRevisionSet} className="gap-2">
+                    <ChevronLeft className="h-4 w-4" />
+                    Back to Sets
+                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    {currentFlashcardIndex + 1} / {activeRevisionSet.kanjiIds.length}
+                  </div>
+                </div>
+
+                {/* Flashcard */}
+                {activeRevisionSet.kanjiIds[currentFlashcardIndex] && (
+                  <div className="mb-6">
+                    <div
+                      onClick={() => toggleFlipCard(activeRevisionSet.kanjiIds[currentFlashcardIndex].id)}
+                      className={`
+                        relative cursor-pointer perspective-1000
+                        transition-transform duration-500 transform-style-preserve-3d
+                        ${flippedCards[activeRevisionSet.kanjiIds[currentFlashcardIndex].id] ? 'rotate-y-180' : ''}
+                      `}
+                      style={{ minHeight: '320px' }}
+                    >
+                      {/* Front of card */}
+                      <Card className={`
+                        absolute inset-0 backface-hidden
+                        ${flippedCards[activeRevisionSet.kanjiIds[currentFlashcardIndex].id] ? 'invisible' : ''}
+                      `}>
+                        <CardContent className="h-full flex flex-col items-center justify-center p-8">
+                          <span className="text-8xl font-japanese mb-4">
+                            {activeRevisionSet.kanjiIds[currentFlashcardIndex].character}
+                          </span>
+                          <div className="flex items-center gap-2 mt-4">
+                            <Badge variant="outline" className={`jlpt-badge ${getJlptBadgeClass(activeRevisionSet.kanjiIds[currentFlashcardIndex].jlpt_level)}`}>
+                              {activeRevisionSet.kanjiIds[currentFlashcardIndex].jlpt_level}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              Level {activeRevisionSet.kanjiIds[currentFlashcardIndex].level}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-6">
+                            Click to reveal meaning
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      {/* Back of card */}
+                      <Card className={`
+                        absolute inset-0 backface-hidden rotate-y-180
+                        ${!flippedCards[activeRevisionSet.kanjiIds[currentFlashcardIndex].id] ? 'invisible' : ''}
+                      `}>
+                        <CardContent className="h-full flex flex-col items-center justify-center p-8">
+                          <span className="text-5xl font-japanese mb-4">
+                            {activeRevisionSet.kanjiIds[currentFlashcardIndex].character}
+                          </span>
+                          <p className="text-2xl font-semibold text-foreground mb-2">
+                            {getPrimaryMeaning(activeRevisionSet.kanjiIds[currentFlashcardIndex].meanings)}
+                          </p>
+                          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm mb-4">
+                            {getPrimaryReading(activeRevisionSet.kanjiIds[currentFlashcardIndex].readings, 'onyomi') && (
+                              <span className="text-muted-foreground">
+                                <span className="text-accent">音</span>{' '}
+                                {getPrimaryReading(activeRevisionSet.kanjiIds[currentFlashcardIndex].readings, 'onyomi')}
+                              </span>
+                            )}
+                            {getPrimaryReading(activeRevisionSet.kanjiIds[currentFlashcardIndex].readings, 'kunyomi') && (
+                              <span className="text-muted-foreground">
+                                <span className="text-primary">訓</span>{' '}
+                                {getPrimaryReading(activeRevisionSet.kanjiIds[currentFlashcardIndex].readings, 'kunyomi')}
+                              </span>
+                            )}
+                          </div>
+                          {/* Vocabulary */}
+                          {activeRevisionSet.kanjiIds[currentFlashcardIndex].vocabulary?.length > 0 && (
+                            <div className="mt-2 pt-4 border-t border-border w-full">
+                              <p className="text-xs text-muted-foreground mb-2 text-center">Words:</p>
+                              <div className="flex flex-wrap justify-center gap-1.5">
+                                {activeRevisionSet.kanjiIds[currentFlashcardIndex].vocabulary.slice(0, 3).map((vocab, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 px-2 py-1 bg-secondary/70 rounded text-xs"
+                                  >
+                                    <span className="font-japanese">{vocab.characters}</span>
+                                    <span className="text-muted-foreground">- {vocab.meanings[0]}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <p className="text-sm text-muted-foreground mt-4">
+                            Click to flip back
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Knew It Checkbox */}
+                    <div className="flex items-center justify-center mt-6">
+                      <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg hover:bg-muted transition-colors">
+                        <Checkbox
+                          checked={knewItCards[activeRevisionSet.kanjiIds[currentFlashcardIndex].id] || false}
+                          onCheckedChange={() => toggleKnewIt(activeRevisionSet.kanjiIds[currentFlashcardIndex].id)}
+                          className="h-5 w-5 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                        />
+                        <span className="text-sm font-medium">I knew this kanji</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Navigation */}
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={prevFlashcard}
+                    disabled={currentFlashcardIndex === 0}
+                    className="gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  
+                  {currentFlashcardIndex === activeRevisionSet.kanjiIds.length - 1 ? (
+                    <Button
+                      onClick={() => {
+                        markSetComplete(activeRevisionSet.id);
+                        closeRevisionSet();
+                      }}
+                      className="gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                      <Check className="h-4 w-4" />
+                      Mark Complete
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={nextFlashcard}
+                      className="gap-2"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+
+                {/* Progress dots */}
+                <div className="flex justify-center gap-1.5 mt-6 flex-wrap">
+                  {activeRevisionSet.kanjiIds.map((k, idx) => (
+                    <button
+                      key={k.id}
+                      onClick={() => {
+                        setCurrentFlashcardIndex(idx);
+                        setFlippedCards({});
+                      }}
+                      className={`
+                        w-3 h-3 rounded-full transition-all
+                        ${idx === currentFlashcardIndex ? 'bg-primary scale-125' : 
+                          knewItCards[k.id] ? 'bg-green-500' : 'bg-muted-foreground/30'}
+                      `}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              // Revision Sets List
+              <>
+                {/* Pending indicator */}
+                {pendingStudied.length > 0 && (
+                  <div className="mb-6 p-4 bg-muted/50 rounded-lg border border-border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          Building next revision set...
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {pendingStudied.length} / {REVISION_SET_SIZE} kanji studied
+                        </p>
+                      </div>
+                      <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary transition-all"
+                          style={{ width: `${(pendingStudied.length / REVISION_SET_SIZE) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Revision Sets Grid */}
+                {revisionSets.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {revisionSets.map((set, index) => {
+                      const knewCount = Object.values(set.knewIt || {}).filter(Boolean).length;
+                      const isExpired = set.completed && isCompletionExpired(set.lastTouched);
+                      const displayCompleted = set.completed && !isExpired;
+                      
+                      return (
+                        <Card 
+                          key={set.id}
+                          className={`cursor-pointer transition-all hover:shadow-lg ${
+                            displayCompleted ? 'border-green-500/50 bg-green-500/5' : ''
+                          }`}
+                          onClick={() => openRevisionSet(set)}
+                        >
+                          <CardContent className="p-5">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm font-medium">
+                                    {formatDate(set.createdAt)}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Set #{revisionSets.length - index}
+                                </p>
+                              </div>
+                              {displayCompleted && (
+                                <Badge className="bg-green-600 text-white">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Complete
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {/* Kanji preview */}
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {set.kanjiIds.slice(0, 10).map(k => (
+                                <span 
+                                  key={k.id}
+                                  className={`
+                                    text-lg font-japanese px-1.5 py-0.5 rounded
+                                    ${set.knewIt?.[k.id] ? 'bg-green-500/20 text-green-700' : 'bg-muted'}
+                                  `}
+                                >
+                                  {k.character}
+                                </span>
+                              ))}
+                              {set.kanjiIds.length > 10 && (
+                                <span className="text-xs text-muted-foreground self-center ml-1">
+                                  +{set.kanjiIds.length - 10} more
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Stats */}
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>{set.kanjiIds.length} kanji</span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Last: {formatDate(set.lastTouched)}
+                              </span>
+                            </div>
+                            
+                            {/* Progress bar */}
+                            <div className="mt-3">
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-muted-foreground">Known</span>
+                                <span className="text-green-600">{knewCount}/{set.kanjiIds.length}</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-green-500 transition-all"
+                                  style={{ width: `${(knewCount / set.kanjiIds.length) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="p-4 bg-muted rounded-full mb-4">
+                      <RotateCcw className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-lg font-medium text-foreground mb-2">
+                      No revision sets yet
+                    </p>
+                    <p className="text-muted-foreground max-w-sm">
+                      Mark {REVISION_SET_SIZE} kanji as "Studied" in the Browse tab to create your first revision set.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </TabsContent>
         </Tabs>
       </main>
 
