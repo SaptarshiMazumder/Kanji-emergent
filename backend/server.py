@@ -65,6 +65,13 @@ class ContextSentence(BaseModel):
     en: str
 
 
+class VocabWord(BaseModel):
+    id: int
+    characters: str
+    meanings: List[str]
+    readings: List[str]
+
+
 class KanjiSubject(BaseModel):
     id: int
     character: str
@@ -74,6 +81,7 @@ class KanjiSubject(BaseModel):
     meaning_mnemonic: Optional[str] = None
     reading_mnemonic: Optional[str] = None
     context_sentences: List[ContextSentence] = []
+    vocabulary: List[VocabWord] = []
     jlpt_level: Optional[str] = None
 
 
