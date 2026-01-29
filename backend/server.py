@@ -417,6 +417,203 @@ async def get_kanji_by_id(kanji_id: int):
         raise HTTPException(status_code=500, detail=f"Error connecting to WaniKani API: {str(e)}")
 
 
+@api_router.get("/kanji/search", response_model=KanjiResponse)
+async def search_kanji(
+    query: str = Query(..., min_length=1, description="Search query (kanji character, meaning, or reading)"),
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(20, ge=1, le=100, description="Items per page")
+):
+    """
+    Search kanji by character, meaning, or reading.
+    """
+    if not WANIKANI_API_KEY:
+        raise HTTPException(status_code=500, detail="WaniKani API key not configured")
+    
+    headers = {
+        "Authorization": f"Bearer {WANIKANI_API_KEY}",
+        "Wanikani-Revision": "20170710"
+    }
+    
+    all_kanji_raw = []
+    next_url = f"{WANIKANI_BASE_URL}/subjects?types=kanji"
+    
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as http_client:
+            # Fetch all kanji
+            while next_url:
+                response = await http_client.get(next_url, headers=headers)
+                
+                if response.status_code != 200:
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"WaniKani API error: {response.text}"
+                    )
+                
+                data = response.json()
+                
+                for item in data.get("data", []):
+                    item_data = item.get("data", {})
+                    all_kanji_raw.append({
+                        "id": item.get("id", 0),
+                        "data": item_data,
+                        "amalgamation_ids": item_data.get("amalgamation_subject_ids", []),
+                        "component_ids": item_data.get("component_subject_ids", [])
+                    })
+                
+                next_url = data.get("pages", {}).get("next_url")
+            
+            # Filter kanji by search query
+            query_lower = query.lower()
+            filtered_kanji = []
+            
+            for kanji_raw in all_kanji_raw:
+                item_data = kanji_raw["data"]
+                
+                # Check if query matches character
+                if item_data.get("characters", "") == query:
+                    filtered_kanji.append(kanji_raw)
+                    continue
+                
+                # Check if query matches any meaning
+                meanings = item_data.get("meanings", [])
+                if any(query_lower in m.get("meaning", "").lower() for m in meanings):
+                    filtered_kanji.append(kanji_raw)
+                    continue
+                
+                # Check if query matches any reading
+                readings = item_data.get("readings", [])
+                if any(query_lower == r.get("reading", "").lower() for r in readings):
+                    filtered_kanji.append(kanji_raw)
+                    continue
+            
+            # Sort by level
+            filtered_kanji.sort(key=lambda x: x["data"].get("level", 1))
+            
+            # Apply pagination
+            total_count = len(filtered_kanji)
+            total_pages = max(1, (total_count + per_page - 1) // per_page)
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            paginated_raw = filtered_kanji[start_idx:end_idx]
+            
+            # Collect vocabulary and radical IDs
+            vocab_ids_to_fetch = set()
+            radical_ids_to_fetch = set()
+            for kanji_raw in paginated_raw:
+                vocab_ids = kanji_raw["amalgamation_ids"][:5]
+                vocab_ids_to_fetch.update(vocab_ids)
+                radical_ids_to_fetch.update(kanji_raw["component_ids"])
+            
+            # Fetch vocabulary
+            vocab_map = {}
+            if vocab_ids_to_fetch:
+                vocab_ids_str = ",".join(map(str, vocab_ids_to_fetch))
+                vocab_url = f"{WANIKANI_BASE_URL}/subjects?ids={vocab_ids_str}"
+                vocab_response = await http_client.get(vocab_url, headers=headers)
+                
+                if vocab_response.status_code == 200:
+                    vocab_data = vocab_response.json()
+                    for v_item in vocab_data.get("data", []):
+                        v_id = v_item.get("id")
+                        v_data = v_item.get("data", {})
+                        all_meanings = [m.get("meaning", "") for m in v_data.get("meanings", []) if m.get("primary")]
+                        if not all_meanings:
+                            all_meanings = [m.get("meaning", "") for m in v_data.get("meanings", [])[:1]]
+                        vocab_map[v_id] = VocabWord(
+                            id=v_id,
+                            characters=v_data.get("characters", ""),
+                            meanings=all_meanings,
+                            readings=[r.get("reading", "") for r in v_data.get("readings", []) if r.get("primary")]
+                        )
+            
+            # Fetch radicals
+            radical_map = {}
+            if radical_ids_to_fetch:
+                radical_ids_str = ",".join(map(str, radical_ids_to_fetch))
+                radical_url = f"{WANIKANI_BASE_URL}/subjects?ids={radical_ids_str}"
+                radical_response = await http_client.get(radical_url, headers=headers)
+                
+                if radical_response.status_code == 200:
+                    radical_data = radical_response.json()
+                    for r_item in radical_data.get("data", []):
+                        r_id = r_item.get("id")
+                        r_data = r_item.get("data", {})
+                        primary_meaning = next(
+                            (m.get("meaning", "") for m in r_data.get("meanings", []) if m.get("primary")),
+                            r_data.get("meanings", [{}])[0].get("meaning", "") if r_data.get("meanings") else ""
+                        )
+                        radical_map[r_id] = RadicalComponent(
+                            id=r_id,
+                            character=r_data.get("characters"),
+                            slug=r_data.get("slug", ""),
+                            meaning=primary_meaning
+                        )
+            
+            # Build kanji objects
+            paginated_kanji = []
+            for kanji_raw in paginated_raw:
+                item_data = kanji_raw["data"]
+                
+                meanings = [
+                    KanjiMeaning(
+                        meaning=m.get("meaning", ""),
+                        primary=m.get("primary", False)
+                    )
+                    for m in item_data.get("meanings", [])
+                ]
+                
+                readings = [
+                    KanjiReading(
+                        reading=r.get("reading", ""),
+                        primary=r.get("primary", False),
+                        type=r.get("type", "onyomi")
+                    )
+                    for r in item_data.get("readings", [])
+                ]
+                
+                wanikani_level = item_data.get("level", 1)
+                
+                context_sentences = [
+                    ContextSentence(
+                        ja=cs.get("ja", ""),
+                        en=cs.get("en", "")
+                    )
+                    for cs in item_data.get("context_sentences", [])
+                ]
+                
+                vocab_list = [vocab_map[v_id] for v_id in kanji_raw["amalgamation_ids"][:5] if v_id in vocab_map]
+                radical_list = [radical_map[r_id] for r_id in kanji_raw["component_ids"] if r_id in radical_map]
+                
+                kanji_subject = KanjiSubject(
+                    id=kanji_raw["id"],
+                    character=item_data.get("characters", ""),
+                    meanings=meanings,
+                    readings=readings,
+                    level=wanikani_level,
+                    meaning_mnemonic=item_data.get("meaning_mnemonic", ""),
+                    reading_mnemonic=item_data.get("reading_mnemonic", ""),
+                    context_sentences=context_sentences,
+                    vocabulary=vocab_list,
+                    radicals=radical_list,
+                    jlpt_level=get_jlpt_level(wanikani_level)
+                )
+                paginated_kanji.append(kanji_subject)
+        
+        return KanjiResponse(
+            kanji=paginated_kanji,
+            total_count=total_count,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages
+        )
+        
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Request to WaniKani API timed out")
+    except httpx.RequestError as e:
+        logger.error(f"Request error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error connecting to WaniKani API: {str(e)}")
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
