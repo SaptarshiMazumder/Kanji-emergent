@@ -72,6 +72,13 @@ class VocabWord(BaseModel):
     readings: List[str]
 
 
+class RadicalComponent(BaseModel):
+    id: int
+    character: Optional[str] = None
+    slug: str
+    meaning: str
+
+
 class KanjiSubject(BaseModel):
     id: int
     character: str
@@ -82,6 +89,7 @@ class KanjiSubject(BaseModel):
     reading_mnemonic: Optional[str] = None
     context_sentences: List[ContextSentence] = []
     vocabulary: List[VocabWord] = []
+    radicals: List[RadicalComponent] = []
     jlpt_level: Optional[str] = None
 
 
