@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, EyeOff, ChevronDown, Loader2, BookOpen, Filter } from 'lucide-react';
+import { Eye, EyeOff, ChevronDown, Loader2, BookOpen, Filter, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { Checkbox } from '../components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -38,16 +39,35 @@ const JLPT_LEVELS = [
 
 const ITEMS_PER_PAGE = 20;
 
+// Helper to get/set studied kanji from localStorage
+const getStudiedKanji = () => {
+  try {
+    const stored = localStorage.getItem('studiedKanji');
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+};
+
+const setStudiedKanjiStorage = (studied) => {
+  try {
+    localStorage.setItem('studiedKanji', JSON.stringify(studied));
+  } catch {
+    // localStorage might be full or disabled
+  }
+};
+
 export default function KanjiFlashcards() {
   const [kanji, setKanji] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedLevel, setSelectedLevel] = useState('all');
+  const [selectedLevel, setSelectedLevel] = useState('N2'); // Default to N2
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [revealedCards, setRevealedCards] = useState({});
   const [openMnemonics, setOpenMnemonics] = useState({});
+  const [studiedKanji, setStudiedKanji] = useState(getStudiedKanji);
 
   const fetchKanji = useCallback(async () => {
     setLoading(true);
